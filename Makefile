@@ -30,12 +30,21 @@ cgRender.o: cgRender.h cgRender.cpp
 #-------------------------------------------------------------------------------
 # PHONY TARGETS
 #-------------------------------------------------------------------------------
-.PHONY : clean again all
+.PHONY : clean again all git run
 all: $(PROGRAM)
 
 clean:
-	rm -rf $(OBJ_LIST) $(PROGRAM)
+	rm -rf $(OBJ_LIST) $(PROGRAM) *~
 
 again:
 	make clean
 	make
+
+git:
+	make
+	git add .
+	git commit -m "$(m)"
+
+run:
+	make
+	./$(PROGRAM)

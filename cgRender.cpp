@@ -1,4 +1,29 @@
-#include <cgRender.h>
+#include "cgRender.h"
+
+int main(int argc, char** argv)
+{
+  // Initialize graphics window
+  glutInit(&argc, argv);
+  glutInitDisplayMode (GLUT_SINGLE | GLUT_RGB | GLUT_DEPTH); 
+  //  Or, can use double buffering
+  //  glutInitDisplayMode (GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH); 
+
+  glutInitWindowSize (256, 256); 
+  glutInitWindowPosition (0, 0);
+  glutCreateWindow (argv[0]);
+
+  // Initialize OpenGL
+  init();
+
+  // Initialize callback functions
+  glutDisplayFunc(display); 
+  glutReshapeFunc(reshape);
+  glutKeyboardFunc(keyboard);
+
+  // Start rendering 
+  glutMainLoop();
+}
+
 
 void init() 
 {
@@ -71,28 +96,4 @@ void keyboard(unsigned char key, int x, int y)
     exit(0);
     break;
   }
-}
-
-int main(int argc, char** argv)
-{
-  // Initialize graphics window
-  glutInit(&argc, argv);
-  glutInitDisplayMode (GLUT_SINGLE | GLUT_RGB | GLUT_DEPTH); 
-  //  Or, can use double buffering
-  //  glutInitDisplayMode (GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH); 
-
-  glutInitWindowSize (256, 256); 
-  glutInitWindowPosition (0, 0);
-  glutCreateWindow (argv[0]);
-
-  // Initialize OpenGL
-  init();
-
-  // Initialize callback functions
-  glutDisplayFunc(display); 
-  glutReshapeFunc(reshape);
-  glutKeyboardFunc(keyboard);
-
-  // Start rendering 
-  glutMainLoop();
 }

@@ -21,21 +21,30 @@ LDFLAGS = -L/usr/X11R6/lib -lglut -lGLU -lGL -lXi -lXmu -lXt -lXext -lX11 -lSM -
 #-------------------------------------------------------------------------------
 # ACTUAL TARGETS
 #-------------------------------------------------------------------------------
-cgRender.o: cgRender.h cgRender.cpp
-	$(COMPILER) $(CXXFLAGS) $(CFLAGS) cgRender.cpp -o cgRender.o
-
 PROGRAM: $(OBJ_LIST)
 	$(COMPILER) $(OBJ_LIST) -o $(PROGRAM) $(CXXFLAGS) $(LDFLAGS)
+
+cgRender.o: cgRender.h cgRender.cpp
+	$(COMPILER) $(CXXFLAGS) $(CFLAGS) cgRender.cpp -o cgRender.o
 
 #-------------------------------------------------------------------------------
 # PHONY TARGETS
 #-------------------------------------------------------------------------------
-.PHONY : clean again all
+.PHONY : clean again all git run
 all: $(PROGRAM)
 
 clean:
-	rm -rf $(OBJ_LIST) $(PROGRAM)
+	rm -rf $(OBJ_LIST) $(PROGRAM) *~
 
 again:
 	make clean
 	make
+
+git:
+	make
+	git add .
+	git commit -m $(m)
+
+run:
+	make
+	./$(PROGRAM)
