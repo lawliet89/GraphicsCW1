@@ -134,6 +134,36 @@ void loadData()
   }
   
   cout << polygons.size() << " polygons loaded \n";
+  
+  // Get texture data
+  do{
+      getline(vtk, buffer);		// The line with the number of points
+      bufferStream.clear();
+      bufferStream.str(buffer);	// Put line in to a stringstream
+      
+      // Extract the POINT_DATA bit
+      bufferStream >> buffer;
+      
+
+    } while(buffer != "POINT_DATA" && !vtk.eof());
+  
+  if (vtk.eof()){
+    cout << "File ended unexpectedly (POINT_DATA) \n";
+    exit(1);
+  }    
+  
+  // Get number of data points
+  bufferStream >> n;
+  // Next line can be discarded
+  getline(vtk, buffer);
+  
+  for (int i = 0; i < n; i++){
+    vtk >> vertices.at(i).textureX >> vertices.at(i).textureY;
+  }
+  
+  cout << n << " texture data points loaded.\n";
+  
+  cout << "VTK Load complete" << endl;
 }
 
 

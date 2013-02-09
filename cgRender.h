@@ -15,10 +15,13 @@ using namespace std;
 
 // Path to VTK file
 #define VTK_PATH "data/face.vtk"
+// Path to texture file
+#define TEXTURE_PATH "data/face.ppm"
 
 // Define the various data structure for storing the image data
 template <typename T=float> struct Vertex{
-   T x, y, z;
+   T x, y, z;	// Vertex coordinates
+   T textureX, textureY;	// Texture coordinates
 };
 
 // Function prototypes
