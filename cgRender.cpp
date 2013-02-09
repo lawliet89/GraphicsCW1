@@ -1,7 +1,13 @@
 #include "cgRender.h"
 
+// Global variables
+vector< Vertex<float> > vertices;
+
 int main(int argc, char** argv)
 {
+  // Load data to memory
+  loadData();
+  
   // Initialize graphics window
   glutInit(&argc, argv);
   glutInitDisplayMode (GLUT_SINGLE | GLUT_RGB | GLUT_DEPTH); 
@@ -22,6 +28,88 @@ int main(int argc, char** argv)
 
   // Start rendering 
   glutMainLoop();
+}
+
+// Loads the VTK file and texture into memory
+void loadData()
+{
+  cout << "Loading VTK" << endl;
+  ifstream vtk(VTK_PATH);	// Open the VTK file
+  if (vtk.fail())
+  {	// File opening has failed
+    cout << "Unable to open VTK file \n";
+    exit(1);    
+  }
+  
+  string buffer;	// String buffer
+  stringstream bufferStream;	// StringStream object
+  
+  // The first four lines are essentially useless. Let's get rid of them
+  getline(vtk, buffer);		// # vtk DataFile Version 3.0
+  getline(vtk, buffer);		// Somebody's face
+  getline(vtk, buffer);		// ASCII
+  getline(vtk, buffer);		// DATASET POLYDATA
+  
+  int n;	// Store the number of points
+  
+  // Now let's get the number of points
+  // Loop to ensure that we read correctly.
+  do{
+    getline(vtk, buffer);		// The line with the number of points
+    bufferStream.clear();
+    bufferStream.str(buffer);	// Put line in to a stringstream
+    
+    // Extract the POINTS bit
+    bufferStream >> buffer;
+    
+
+  } while(buffer != "POINTS" && !vtk.eof());
+  
+  if (vtk.eof()){
+    cout << "File ended unexpectedly (POINTS) \n";
+    exit(1);
+  }
+  // Get the number of points
+  bufferStream >> n;
+  // Now let's load the vertices
+  vertices.resize(n);
+  
+  for (int i = 0; i < n; i++){
+    if (vtk.eof()){
+      cout << "File ended unexpectedly (VERTICES) \n";
+      exit(1);
+    }
+    Vertex<float> current;
+    vtk >> current.x >> current.y >> current.z;
+    vertices[i] = current;
+  }
+  
+  // Now we might get some leftover garbage like new line delimiter. 
+  // Use a loop to rid fhe buffer of extraneous new line characters, for example
+  do{
+      getline(vtk, buffer);		// The line with the number of points
+      bufferStream.clear();
+      bufferStream.str(buffer);	// Put line in to a stringstream
+      
+      // Extract the POLYGONS bit
+      bufferStream >> buffer;
+      
+
+    } while(buffer != "POLYGONS" && !vtk.eof());
+  
+  if (vtk.eof()){
+    cout << "File ended unexpectedly (POLYGONS) \n";
+    exit(1);
+  }  
+  
+  // Get the number of polygons
+  bufferStream >> n;
+  
+  // Get the number of cells
+  int cell;
+  bufferStream >> cell;
+  
+  
 }
 
 
