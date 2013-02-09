@@ -2,7 +2,7 @@
 
 // Global variables
 vector< Vertex<float> > vertices;
-
+vector< vector< int > > polygons;
 int main(int argc, char** argv)
 {
   // Load data to memory
@@ -72,7 +72,7 @@ void loadData()
   // Get the number of points
   bufferStream >> n;
   // Now let's load the vertices
-  vertices.resize(n);
+  vertices.reserve(n);
   
   for (int i = 0; i < n; i++){
     if (vtk.eof()){
@@ -81,8 +81,10 @@ void loadData()
     }
     Vertex<float> current;
     vtk >> current.x >> current.y >> current.z;
-    vertices[i] = current;
+    vertices.push_back(current);
   }
+  
+  cout << vertices.size() << " vertices loaded" << endl;
   
   // Now we might get some leftover garbage like new line delimiter. 
   // Use a loop to rid fhe buffer of extraneous new line characters, for example
@@ -109,7 +111,29 @@ void loadData()
   int cell;
   bufferStream >> cell;
   
+  int cellCount = 0;	// track and count the number of cells
+  // Load polygons
+  for (int i = 0; i < n; i++){
+    // Get the number of vertices for the current polygon
+    int numVertices;
+    vtk >> numVertices;
+    cellCount++;
+    // Load the vertices for the current polygon
+    vector<int> current(numVertices);
+    for (int j = 0; j < numVertices; j++){
+      int index;	// Index of the vertex
+      vtk >> index;
+      current.push_back(index);
+      cellCount++;
+    }
+    polygons.push_back(current);
+  }
+  if (cellCount != cell){
+    cout << "Cell count mismatch " << cell << " vs " << cellCount << endl;
+    exit(1);
+  }
   
+  cout << polygons.size() << " polygons loaded \n";
 }
 
 
