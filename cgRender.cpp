@@ -68,7 +68,7 @@ void init()
 }
 
 void idle(){
-	angle += 0.1f;
+	angle += 1.0f;
 	glutPostRedisplay();
 }
 
@@ -86,18 +86,30 @@ void display(void)
 
 	// Set the Camera
 	// gluLookAt(eyex, eyey, eyez, centerx, centery, centerz, upx, upy, upz);
-	gluLookAt(	0.0f, 0.0f, 10.0f,
-			0.0f, 0.0f,  0.0f,
+	gluLookAt(	ceil(maxVertex.x), ceil(maxVertex.y), ceil(maxVertex.z),
+			centreVertex.x, centreVertex.y,  centreVertex.z,
 			0.0f, 1.0f,  0.0f);
 
 	glRotatef(angle, 0.0f, 1.0f, 0.0f);
 
-	glBegin(GL_TRIANGLES);
-		glVertex3f(-2,-2,-5.0);
-		glVertex3f(2,0.0,-5.0);
-		glVertex3f(0.0,2,-5.0);
-	glEnd();
+	// Draw polygon
+	for (vector< vector< int > >::iterator i = polygons.begin(); i < polygons.end(); i++){
+		vector<int> polygon = *i;
+		glBegin(GL_POLYGON);	// Begin drawing polygons
 
+		for (vector<int>::iterator j = polygon.begin(); j < polygon.end(); j++){
+			Vertex<float> vertex = vertices.at(*j);
+
+			// Define coordinates of vertex
+			glVertex3f(vertex.x, vertex.y, vertex.z);
+			// Define texture coordinates of vertex
+			glTexCoord2f(vertex.textureX, vertex.textureY);
+
+		}
+		glEnd();
+	}
+
+	glFlush ();
 	glutSwapBuffers();
   /*
   for (all polygons)
