@@ -1,4 +1,5 @@
 #include "cgRender.h"
+using namespace std;
 
 // Global variables
 vector< Vertex<float> > vertices;
