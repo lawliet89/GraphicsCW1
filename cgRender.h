@@ -3,7 +3,8 @@
 #define _CG_RENDER_H
 
 #include <GL/glut.h>
-#include <stdlib.h>
+#include <cstdlib>
+#include <cmath>
 
 #include <fstream>
 #include <iostream>
@@ -24,9 +25,18 @@ template <typename T=float> struct Vertex{
 
 // Function prototypes
 void init();
-void display(void);
+void idle();
+void display();
 void reshape (int w, int h);
 void keyboard(unsigned char key, int x, int y);
+void keyboardSpecial (int key, int x, int y);
 void loadData();
+
+// Overload to allow cout << Vertex
+template <typename T=float> std::ostream& operator<< (std::ostream &output, const Vertex<T> &obj){
+	output << "(" << obj.x << "," << obj.y << "," << obj.z << ")";
+
+	return output;
+}
 
 #endif

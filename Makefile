@@ -30,7 +30,7 @@ cgRender.o: cgRender.h cgRender.cpp
 #-------------------------------------------------------------------------------
 # PHONY TARGETS
 #-------------------------------------------------------------------------------
-.PHONY : clean again all git run
+.PHONY : clean again all git run debug
 all: $(PROGRAM)
 
 clean:
@@ -48,3 +48,7 @@ git:
 run:
 	make
 	./$(PROGRAM)
+	
+debug:
+	make
+	gdb $(PROGRAM)
