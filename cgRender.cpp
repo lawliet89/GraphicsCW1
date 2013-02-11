@@ -99,13 +99,14 @@ template <typename T=float> struct Vertex{		// struct to make all the methods pu
 };
 
 // Function prototypes
-void init();
-void idle();
-void display();
-void reshape (int w, int h);
-void keyboard(unsigned char key, int x, int y);
-void keyboardSpecial (int key, int x, int y);
-void loadData();
+void init();		// Initialise lighting and material
+void idle();		// Idle rotation animation
+void display();		// Render
+void reshape (int w, int h);	// Viewport change
+void keyboard(unsigned char key, int x, int y);	// respond to keyboard
+void keyboardSpecial (int key, int x, int y);	// ditto
+void loadData();	// load polygon data and texture
+void screendump(int W, int H);	// dump a screenshot
 
 // Overload to allow cout << Vertex
 template <typename T=float> std::ostream& operator<< (std::ostream &output, const Vertex<T> &obj){
@@ -125,6 +126,8 @@ GLfloat lightPosition[] = {0.0f, 0.0f, 0.0f, 1.0f};
 float angle = 0.0f;
 float zoom = 1.f;
 float translationFactor = 0.f;
+
+int viewportWidth, viewportHeight;
 
 // Calculated values
 // min, max, and centre (mean) of all the vertices. Also the mean of polygon normal
@@ -177,7 +180,7 @@ void init()
 
 	glShadeModel (GL_SMOOTH); // http://www.opengl.org/sdk/docs/man2/xhtml/glShadeModel.xml
 
-	// Set material parameters
+/*	// Set material parameters
 
 	// Material Ambient and diffuse
 	GLfloat materialAmbient[] = {1.0f, (218.0f/255.0f), (190.0f/255.0f), 1.0f}; // R:255, G:218, B:190
@@ -187,8 +190,8 @@ void init()
 	GLfloat materialSpecular[] = {1.0f, (229.0f/255.0f), (200.0f/255.0f), 1.0f};
 	glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR,  materialSpecular);
 
-	GLfloat materialShininess[] = { 15.0f };
-	glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, materialShininess);
+	GLfloat materialShininess[] = { 5.0f };
+	glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, materialShininess);*/
 
 	// Enable lighting
 	glEnable (GL_LIGHTING);
@@ -199,10 +202,10 @@ void init()
 	// Light position: cf http://www.opengl.org/archives/resources/faq/technical/lights.htm#ligh0050
 
 	// Ambient light colour
-	GLfloat lightAmbient[] = {0.1f, 0.1f, 0.1f, 1.0f};
+	GLfloat lightAmbient[] = {0.2f, 0.2f, 0.2f, 1.0f};
 	glLightfv(GL_LIGHT0, GL_AMBIENT_AND_DIFFUSE,  lightAmbient);
 
-	GLfloat lightSpecular[] = {0.5f, 0.5f, 0.5f, 1.0f};
+	GLfloat lightSpecular[] = {0.6f, 0.6f, 0.6f, 1.0f};
 	glLightfv(GL_LIGHT0, GL_SPECULAR, lightSpecular);
 
 	//glLightf(GL_LIGHT0, GL_SPOT_EXPONENT,1.0f);
@@ -263,7 +266,7 @@ void display(void)
 		lookAt = centreVertex;
 	}
 
-	gluLookAt(	eye.x, eye.y, eye.z,
+	gluLookAt(eye.x, eye.y, eye.z,
 			lookAt.x, lookAt.y,  lookAt.z,
 			0.0f, 1.0f,  0.0f);
 
@@ -297,6 +300,8 @@ void display(void)
 void reshape (int w, int h)
 {
 	//cout << "reshape" << endl;
+	viewportWidth = w;
+	viewportHeight = h;
 
 	// Prevent a divide by zero, when window is too short
 	if(h == 0)
@@ -335,6 +340,28 @@ void keyboard(unsigned char key, int x, int y)
 	case 'r':
 		rotate = !rotate;
 		break;
+	case 'p':
+		screendump(viewportWidth, viewportHeight);
+		cout << "Dumped" << endl;
+		break;
+	case 's':	// Output current setting to console
+		cout << "Zoom factor: " << zoom << endl;
+		cout << "Translation factor: " << translationFactor << endl;
+		cout << "Rotation angle: " << angle << endl;
+		break;
+
+	case '1':	// Set the scene to take picture for gouraud-1
+		/*
+		 	Zoom factor: 2.7
+			Translation factor: 0.083
+			Rotation angle: 0
+		 */
+		zoom = 2.7f;
+		//translationFactor = 0.083f;	// perhaps unnecessary
+		angle = 0.f;
+		rotate = false;
+		glutPostRedisplay();
+		break;
 	}
 }
 
@@ -363,12 +390,10 @@ void keyboardSpecial (int key, int x, int y)
 			break;
 		case GLUT_KEY_UP:
 			zoom += ZOOM_STEP;
-			cout << "Zoom factor " << zoom << endl;
 			break;
 		case GLUT_KEY_DOWN:
 			zoom -= ZOOM_STEP;
 			zoom = zoom <= 0.1f ? 0.1f : zoom;	// Max zoom out is at a factor of 0.1
-			cout << "Zoom factor " << zoom << endl;
 			break;
 	}
 	if (!rotate)
@@ -585,4 +610,21 @@ void loadData()
 	// Allocate a texture name
 	glGenTextures(1, &texture);
 
+}
+
+// Save file as TGA
+// from http://www.opengl.org/discussion_boards/showthread.php/161499-Output-Image-to-file
+void screendump(int W, int H) {
+	FILE   *out = fopen("screenshot.tga","wb");
+	char   *pixel_data = new char[3*W*H];
+	short  TGAhead[] = { 0, 2, 0, 0, 0, 0, W, H, 24 };
+
+	glReadBuffer(GL_FRONT);
+	glReadPixels(0, 0, W, H, GL_BGR, GL_UNSIGNED_BYTE, pixel_data);
+
+	fwrite(TGAhead,sizeof(TGAhead),1,out);
+	fwrite(pixel_data, 3*W*H, 1, out);
+	fclose(out);
+
+	delete[] pixel_data;
 }
