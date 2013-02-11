@@ -24,19 +24,6 @@ using namespace std;
 // Path to texture file
 #define TEXTURE_PATH "data/face.ppm"
 
-// Global variables
-vector< Vertex<float> > vertices;	// vector of vertices
-vector< vector< int > > polygons;	// vector of indices for the vertices for each polygon
-vector< Vertex<float> > polygonsNormal;	// Normal for each polygon
-
-GLuint texture;
-
-float angle = 0.0f;
-
-// Calculated values
-Vertex<float> minVertex, maxVertex, centreVertex;	// min, max, and centre (mean) of all the vertices
-
-
 // Vertex Struct
 template <typename T=float> struct Vertex{		// struct to make all the methods public by default
    T x, y, z;	// Vertex coordinates
@@ -112,6 +99,19 @@ template <typename T=float> std::ostream& operator<< (std::ostream &output, cons
 
 	return output;
 }
+/******************* GLOBALS **********************************/
+// Global variables
+vector< Vertex<float> > vertices;	// vector of vertices
+vector< vector< int > > polygons;	// vector of indices for the vertices for each polygon
+vector< Vertex<float> > polygonsNormal;	// Normal for each polygon
+
+GLuint texture;
+
+float angle = 0.0f;
+
+// Calculated values
+Vertex<float> minVertex, maxVertex, centreVertex;	// min, max, and centre (mean) of all the vertices
+
 /******************** FUNCTIONS ***********************/
 
 
