@@ -29,7 +29,10 @@ using namespace std;
 #define ROTATION_STEP 2.f
 
 // Zooming step
-#define ZOOM_STEP 0.5f
+#define ZOOM_STEP 0.1f
+
+// Translation step
+#define TRANSLATE_STEP 0.001f
 
 // Factor to multiply for rotation
 #define ROTATION_CLOCKWISE -1.f
@@ -121,15 +124,17 @@ GLfloat lightPosition[] = {0.0f, 0.0f, 0.0f, 1.0f};
 
 float angle = 0.0f;
 float zoom = 1.f;
+float translationFactor = 0.f;
 
 // Calculated values
 // min, max, and centre (mean) of all the vertices. Also the mean of polygon normal
 // camera position, direction vector from camera to centreVertex
-Vertex<float> minVertex, maxVertex, centreVertex, meanNormal, camera, cameraVector;
+// translationVector is given by cameraVector X (0,1,0)
+Vertex<float> minVertex, maxVertex, centreVertex, meanNormal, camera, cameraVector, translationVector;
 
 // Toggles
 bool rotate = false;
-float rotationFactor = ROTATION_CLOCKWISE;
+float rotationFactor = ROTATION_ANTICLOCKWISE;
 
 /******************** FUNCTIONS ***********************/
 
@@ -168,7 +173,7 @@ int main(int argc, char** argv)
 void init()
 {
 	glClearColor (0.0, 0.0, 0.0, 0.0);
-	cout << "init" << endl;
+	cout << "Setting up lighting" << endl;
 
 	glShadeModel (GL_SMOOTH); // http://www.opengl.org/sdk/docs/man2/xhtml/glShadeModel.xml
 
@@ -241,19 +246,28 @@ void display(void)
 
 	// Set the Camera
 	// gluLookAt(eyex, eyey, eyez, centerx, centery, centerz, upx, upy, upz);
-	Vertex<float> lookAt;	// position to look at
+
+	Vertex<float> eye;	// camera position
 	if (zoom != 1.f){
-		lookAt = camera + cameraVector*zoom;
+		eye = centreVertex - cameraVector*(1.f/zoom);			// this is basically a 1/x curve
+	}
+	else{
+		eye = camera;
+	}
+
+	Vertex<float> lookAt;	// look at position
+	if (translationFactor != 0){
+		lookAt = centreVertex + translationVector * translationFactor;
 	}
 	else{
 		lookAt = centreVertex;
 	}
 
-	gluLookAt(	camera.x, camera.y, camera.z,
+	gluLookAt(	eye.x, eye.y, eye.z,
 			lookAt.x, lookAt.y,  lookAt.z,
 			0.0f, 1.0f,  0.0f);
 
-	glRotatef(angle, 0.0f, 1.0f, 0.0f);
+	glRotatef(angle, 0.f, centreVertex.y, 0.f);
 
 	vector< Vertex<float> >::iterator k = polygonsNormal.begin();
 	// Draw polygon
@@ -300,7 +314,7 @@ void reshape (int w, int h)
 
 	// Set the correct perspective.
 	// fov, aspect ratio, near g planes, far clipping planes
-	gluPerspective(27.5,ratio, 0.0001f, 10.f);
+	gluPerspective(27.5,ratio, 0.0001f, 20.f);
 
 	// set the camera view
 	// gluLookAt(eyex, eyey, eyez, centerx, centery, centerz, upx, upy, upz);
@@ -327,18 +341,34 @@ void keyboard(unsigned char key, int x, int y)
 // Special key presses
 void keyboardSpecial (int key, int x, int y)
 {
+	int modifier = glutGetModifiers();
 	switch (key){
 		case GLUT_KEY_LEFT:
-			angle -= rotate ? 0.f : ROTATION_STEP;	// ignore if rotation mode is on
-			rotationFactor = rotate ? ROTATION_CLOCKWISE : rotationFactor;	// ignored if rotation factor is not on
+			if (modifier == GLUT_ACTIVE_CTRL){
+				angle += rotate ? 0.f : ROTATION_STEP;	// ignore if rotation mode is on
+				rotationFactor = rotate ? ROTATION_ANTICLOCKWISE : rotationFactor;	// ignored if rotation factor is not on
+			}
+			else{
+				translationFactor += TRANSLATE_STEP;
+			}
 			break;
 		case GLUT_KEY_RIGHT:
-			angle += rotate ? 0.f : ROTATION_STEP;	// ignore if rotation mode is on
-			rotationFactor = rotate ? ROTATION_ANTICLOCKWISE : rotationFactor;	// ignored if rotation factor is not on
+			if (modifier == GLUT_ACTIVE_CTRL){
+				angle -= rotate ? 0.f : ROTATION_STEP;	// ignore if rotation mode is on
+				rotationFactor = rotate ? ROTATION_CLOCKWISE : rotationFactor;	// ignored if rotation factor is not on
+			}
+			else{
+				translationFactor -= TRANSLATE_STEP;
+			}
 			break;
 		case GLUT_KEY_UP:
+			zoom += ZOOM_STEP;
+			cout << "Zoom factor " << zoom << endl;
 			break;
 		case GLUT_KEY_DOWN:
+			zoom -= ZOOM_STEP;
+			zoom = zoom <= 0.1f ? 0.1f : zoom;	// Max zoom out is at a factor of 0.1
+			cout << "Zoom factor " << zoom << endl;
 			break;
 	}
 	if (!rotate)
@@ -444,6 +474,11 @@ void loadData()
 
 	// Camera vector
 	cameraVector = centreVertex - camera;
+	cout << "Camera vector: " << cameraVector << endl;
+
+	// Translation vector
+	translationVector = (cameraVector * Vertex<float>(0.f,1.f,0.f)).normalise();
+	cout << "Translation vector: " << translationVector << endl;
 
 
 	// Now we might get some leftover garbage like new line delimiter.
