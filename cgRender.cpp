@@ -98,6 +98,13 @@ template <typename T=float> struct Vertex{		// struct to make all the methods pu
    }
 };
 
+// Overload to allow for e.g. cout << Vertex
+template <typename T=float> std::ostream& operator<< (std::ostream &output, const Vertex<T> &obj){
+	output << "(" << obj.x << "," << obj.y << "," << obj.z << ")";
+
+	return output;
+}
+
 // Function prototypes
 void init();		// Initialise lighting and material
 void idle();		// Idle rotation animation
@@ -107,13 +114,43 @@ void keyboard(unsigned char key, int x, int y);	// respond to keyboard
 void keyboardSpecial (int key, int x, int y);	// ditto
 void loadData();	// load polygon data and texture
 void screendump(int W, int H);	// dump a screenshot
+void setMaterial();		// set the material setting on the face
 
-// Overload to allow cout << Vertex
-template <typename T=float> std::ostream& operator<< (std::ostream &output, const Vertex<T> &obj){
-	output << "(" << obj.x << "," << obj.y << "," << obj.z << ")";
+/****************** Materials Related ***************************/
+// Material state
+/*
+ * 0 - none - based on defaults @ http://www.gamedev.net/topic/283067-reset-material-values-to-default/
+ *
+ * Human skin tone colours based on RGB at http://www.makehuman.org/forum/viewtopic.php?f=8&t=1529
+ * 1 - white person
+ * 2 - asian (oriental) person (presumably)
+ * 3 - black person
+ */
+int materialState = 0;
+#define MAX_MATERIAL_STATE 3
 
-	return output;
-}
+GLfloat materialAmbient[MAX_MATERIAL_STATE+1][3] = {
+		{0.2f, 0.2f, 0.2f},
+		{1.0f, (206.f/255.f), (180.f/255.f)},
+		{180.f/255.f, 138.f/255.f, 120.f/255.f },
+		{60.f/255.f, 46.f/255.f, 40.f/255.f}
+};
+
+GLfloat materialDiffuse[MAX_MATERIAL_STATE+1][3] = {
+		{0.8f, 0.8f, 0.8f},
+		{1.0f, (195.f/255.f), (170.f/255.f)},
+		{165.f/255.f, 126.f/255.f, 110.f/255.f},
+		{45.f/255.f, 34.f/255.f, 30.f/255.f}
+};
+
+GLfloat materialSpecular[MAX_MATERIAL_STATE+1][3] = {
+		{0.f, 0.f, 0.f},
+		{1.0f, (218.0f/255.0f), (190.0f/255.0f) },
+		{195.f/255.f, 149.f/255.f, 130.f/255.f},
+		{75.f/255.f, 57.f/255.f, 50.f/255.f}
+
+};
+
 /******************* GLOBALS **********************************/
 // Global variables
 vector< Vertex<float> > vertices;	// vector of vertices
@@ -180,19 +217,6 @@ void init()
 
 	glShadeModel (GL_SMOOTH); // http://www.opengl.org/sdk/docs/man2/xhtml/glShadeModel.xml
 
-/*	// Set material parameters
-
-	// Material Ambient and diffuse
-	GLfloat materialAmbient[] = {1.0f, (218.0f/255.0f), (190.0f/255.0f), 1.0f}; // R:255, G:218, B:190
-	glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE,  materialAmbient);
-
-	// Material specular
-	GLfloat materialSpecular[] = {1.0f, (229.0f/255.0f), (200.0f/255.0f), 1.0f};
-	glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR,  materialSpecular);
-
-	GLfloat materialShininess[] = { 5.0f };
-	glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, materialShininess);*/
-
 	// Enable lighting
 	glEnable (GL_LIGHTING);
 	glEnable (GL_LIGHT0); //Light 0: white light (1.0, 1.0, 1.0, 1.0) in RGBA diffuse and specular components
@@ -200,12 +224,16 @@ void init()
 	//glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
 
 	// Light position: cf http://www.opengl.org/archives/resources/faq/technical/lights.htm#ligh0050
+	// Default lighting settings: http://opengl.org.ru/docs/pg/0504.html
 
-	// Ambient light colour
-	GLfloat lightAmbient[] = {0.2f, 0.2f, 0.2f, 1.0f};
-	glLightfv(GL_LIGHT0, GL_AMBIENT_AND_DIFFUSE,  lightAmbient);
 
-	GLfloat lightSpecular[] = {0.6f, 0.6f, 0.6f, 1.0f};
+	GLfloat lightAmbient[] = {0.f, 0.f, 0.f, 1.0f};
+	glLightfv(GL_LIGHT0, GL_AMBIENT,  lightAmbient);
+
+	GLfloat lightDiffuse[] = {0.7f, 0.7f, 0.7f, 1.0f};
+	glLightfv(GL_LIGHT0, GL_DIFFUSE,  lightDiffuse);
+
+	GLfloat lightSpecular[] = {0.9f, 0.9f, 0.9f, 1.0f};
 	glLightfv(GL_LIGHT0, GL_SPECULAR, lightSpecular);
 
 	//glLightf(GL_LIGHT0, GL_SPOT_EXPONENT,1.0f);
@@ -217,7 +245,7 @@ void init()
 	//glLightModelfv( GL_LIGHT_MODEL_AMBIENT, lightModelAmbient );
 
 	// Local viewpoint
-	glLightModeli(GL_LIGHT_MODEL_LOCAL_VIEWER, GL_TRUE);
+	//glLightModeli(GL_LIGHT_MODEL_LOCAL_VIEWER, GL_TRUE);
 
 	// Two sided lighting
 	//glLightModeli( GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE );
@@ -344,10 +372,19 @@ void keyboard(unsigned char key, int x, int y)
 		screendump(viewportWidth, viewportHeight);
 		cout << "Dumped" << endl;
 		break;
+	case 'm':
+		materialState++;
+		if (materialState > MAX_MATERIAL_STATE)
+			materialState = 0;
+		setMaterial();
+		cout << "Material toggled: " << materialState << endl;
+		glutPostRedisplay();
+		break;
 	case 's':	// Output current setting to console
 		cout << "Zoom factor: " << zoom << endl;
 		cout << "Translation factor: " << translationFactor << endl;
 		cout << "Rotation angle: " << angle << endl;
+		cout << "Material state: " << materialState << endl;
 		break;
 
 	case '1':	// Set the scene to take picture for gouraud-1
@@ -355,11 +392,43 @@ void keyboard(unsigned char key, int x, int y)
 		 	Zoom factor: 2.7
 			Translation factor: 0.083
 			Rotation angle: 0
+			Material State: 0
 		 */
 		zoom = 2.7f;
-		//translationFactor = 0.083f;	// perhaps unnecessary
+		translationFactor = 0.083f;	// perhaps unnecessary
 		angle = 0.f;
+		materialState = 0;
 		rotate = false;
+		setMaterial();
+		glutPostRedisplay();
+		break;
+	case '2': // Set the scene to take picture for gouraud-2
+		/*
+		 	Zoom factor: 2.7
+			Translation factor: -0.042
+			Rotation angle: 32
+			Material state: 0
+		 */
+		zoom = 2.7f;
+		angle = 32.f;
+		materialState = 0;
+		translationFactor = -0.042f;
+		rotate = false;
+		setMaterial();
+		glutPostRedisplay();
+		break;
+	case '3': // Set the scene to take picture for gouraud-3
+/*		Zoom factor: 2.7
+		Translation factor: -0.099
+		Rotation angle: 68
+		Material state: 2*/
+
+		zoom = 2.7f;
+		angle = 68.f;
+		materialState = 2;
+		translationFactor = -0.099f;
+		rotate = false;
+		setMaterial();
 		glutPostRedisplay();
 		break;
 	}
@@ -627,4 +696,13 @@ void screendump(int W, int H) {
 	fclose(out);
 
 	delete[] pixel_data;
+}
+
+void setMaterial(){
+	glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT,  materialAmbient[materialState]);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE,  materialDiffuse[materialState]);
+	glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, materialSpecular[materialState]);
+
+	GLfloat materialShininess[] = { 5.0f };
+	glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, materialShininess);
 }
