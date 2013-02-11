@@ -106,11 +106,17 @@ vector< vector< int > > polygons;	// vector of indices for the vertices for each
 vector< Vertex<float> > polygonsNormal;	// Normal for each polygon
 
 GLuint texture;
+GLfloat lightPosition[] = {0.0f, 0.0f, 0.0f, 1.0f};
 
 float angle = 0.0f;
 
 // Calculated values
-Vertex<float> minVertex, maxVertex, centreVertex;	// min, max, and centre (mean) of all the vertices
+// min, max, and centre (mean) of all the vertices. Also the mean of polygon normal
+// and camera position
+Vertex<float> minVertex, maxVertex, centreVertex, meanNormal, camera;
+
+// Toggles
+bool rotate = true;
 
 /******************** FUNCTIONS ***********************/
 
@@ -148,36 +154,66 @@ int main(int argc, char** argv)
 
 void init()
 {
-  glClearColor (0.0, 0.0, 0.0, 0.0);
-  cout << "init" << endl;
+	glClearColor (0.0, 0.0, 0.0, 0.0);
+	cout << "init" << endl;
 
-  glShadeModel (GL_SMOOTH); // http://www.opengl.org/sdk/docs/man2/xhtml/glShadeModel.xml
+	glShadeModel (GL_SMOOTH); // http://www.opengl.org/sdk/docs/man2/xhtml/glShadeModel.xml
 
-  // Enable lighting
-  glEnable (GL_LIGHTING);
-  glEnable (GL_LIGHT0); //Light 0: white light (1.0, 1.0, 1.0, 1.0) in RGBA diffuse and specular components
-  //glEnable(GL_NORMALIZE);	// Auto normlization of normals, but slow
+	// Set material parameters
 
-  /*
+	// Material Ambient and diffuse
+	GLfloat materialAmbient[] = {1.0f, (218.0f/255.0f), (190.0f/255.0f), 1.0f}; // R:255, G:218, B:190
+	glMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE,  materialAmbient);
+
+	// Material specular
+	GLfloat materialSpecular[] = {1.0f, (229.0f/255.0f), (200.0f/255.0f), 1.0f};
+	glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR,  materialSpecular);
+
+	GLfloat materialShininess[] = { 15.0f };
+	glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, materialShininess);
+
+	// Enable lighting
+	glEnable (GL_LIGHTING);
+	glEnable (GL_LIGHT0); //Light 0: white light (1.0, 1.0, 1.0, 1.0) in RGBA diffuse and specular components
+	//glEnable(GL_COLOR_MATERIAL);	// allow vertex colours to be set as material colour
+	//glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+
+	// Light position: cf http://www.opengl.org/archives/resources/faq/technical/lights.htm#ligh0050
+
+	// Ambient light colour
+	GLfloat lightAmbient[] = {0.1f, 0.1f, 0.1f, 1.0f};
+	glLightfv(GL_LIGHT0, GL_AMBIENT_AND_DIFFUSE,  lightAmbient);
+
+	GLfloat lightSpecular[] = {0.5f, 0.5f, 0.5f, 1.0f};
+	glLightfv(GL_LIGHT0, GL_SPECULAR, lightSpecular);
+
+	//glLightf(GL_LIGHT0, GL_SPOT_EXPONENT,1.0f);
+
+	//glLightf( GL_LIGHT0, GL_SPOT_CUTOFF, 150.0 );
+
+	// Global Ambient Light
+	//GLfloat lightModelAmbient[] = {0.2, 0.2, 0.2, 1.0};
+	//glLightModelfv( GL_LIGHT_MODEL_AMBIENT, lightModelAmbient );
+
+	// Local viewpoint
+	glLightModeli(GL_LIGHT_MODEL_LOCAL_VIEWER, GL_TRUE);
+
+	// Two sided lighting
+	//glLightModeli( GL_LIGHT_MODEL_TWO_SIDE, GL_TRUE );
 
 
+	//glEnable(GL_NORMALIZE);	// Auto normlization of normals, but slow
 
-  glLightfv(GL_LIGHT0, GL_POSITION, LightPosition);
-  glLightfv(GL_LIGHT0, GL_AMBIENT,  LightAmbient);
-  glLightfv(GL_LIGHT0, GL_DIFFUSE,  LightDiffuse);
-  glLightfv(GL_LIGHT0, GL_SPECULAR, LightSpecular);
-
-  // Set material parameters
-  glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR,  MaterialSpecular);
-  glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, MaterialShininess);
-
-  // Enable Z-buffering
-  glEnable(GL_DEPTH_TEST);
-  */
+	// Enable Z-buffering
+	glEnable(GL_DEPTH_TEST);
 }
 
 void idle(){
-	angle += 1.0f;
+	if (!rotate) return;
+	if (angle <= -360.f)
+		angle = 0;
+	else
+		angle -=2.5f;
 	glutPostRedisplay();
 }
 
@@ -195,7 +231,8 @@ void display(void)
 
 	// Set the Camera
 	// gluLookAt(eyex, eyey, eyez, centerx, centery, centerz, upx, upy, upz);
-	gluLookAt(	ceil(maxVertex.x), ceil(maxVertex.y), ceil(maxVertex.z),
+
+	gluLookAt(	camera.x, camera.y, camera.z,
 			centreVertex.x, centreVertex.y,  centreVertex.z,
 			0.0f, 1.0f,  0.0f);
 
@@ -260,11 +297,14 @@ void reshape (int w, int h)
 // "Normal" key presses
 void keyboard(unsigned char key, int x, int y)
 {
-  switch (key) {
-  case 27: // ESC
-    exit(0);
-    break;
-  }
+	switch (key) {
+	case 27: // ESC
+		exit(0);
+		break;
+	case 'r':
+		rotate = !rotate;
+		break;
+	}
 }
 
 // Special key presses
@@ -362,6 +402,14 @@ void loadData()
 	cout << "Centre: " << centreVertex << endl;
 	cout << vertices.size() << " vertices loaded" << endl;
 
+	//Initialise camera position
+	camera.x = ceil(maxVertex.x);
+	camera.y = ceil(maxVertex.y);
+	camera.z = ceil(maxVertex.z);
+
+	cout << "Camera: " << camera << endl;
+
+
 	// Now we might get some leftover garbage like new line delimiter.
 	// Use a loop to rid fhe buffer of extraneous new line characters, for example
 	do{
@@ -413,9 +461,17 @@ void loadData()
 		vector2 = vertices.at(current.at(2)) - vertices.at(current.at(0));
 
 		normal = (vector1*vector2).normalise();
+
+		meanNormal.x += normal.x/n;
+		meanNormal.y += normal.y/n;
+		meanNormal.z += normal.z/n;
+
 		polygonsNormal.push_back(normal);
 
 	}
+
+	meanNormal = meanNormal.normalise();
+
 	if (cellCount != cell){
 		cout << "Cell count mismatch " << cell << " vs " << cellCount << endl;
 		exit(1);
