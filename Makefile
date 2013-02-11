@@ -24,7 +24,7 @@ LDFLAGS = -L/usr/X11R6/lib -lglut -lGLU -lGL -lXi -lXmu -lXt -lXext -lX11 -lSM -
 $(PROGRAM): $(OBJ_LIST)
 	$(COMPILER) $(OBJ_LIST) -o $(PROGRAM) $(CXXFLAGS) $(LDFLAGS)
 
-cgRender.o: cgRender.h cgRender.cpp
+cgRender.o: cgRender.cpp
 	$(COMPILER) $(CXXFLAGS) $(CFLAGS) cgRender.cpp -o cgRender.o
 
 #-------------------------------------------------------------------------------

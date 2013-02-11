@@ -1,5 +1,28 @@
-#include "cgRender.h"
+/**
+ * Yong Wen Chua (ywc110)
+ *
+ * Resources:
+ * 	- Lighting: http://www.movesinstitute.org/~mcdowell/mv4202/notes/lect13.pdf
+ * 	- General Tutorial: http://www.lighthouse3d.com/tutorials/glut-tutorial/
+ *
+ */
+
+#include <GL/glut.h>
+#include <cstdlib>
+#include <cmath>
+
+#include <fstream>
+#include <iostream>
+#include <vector>
+#include <string>
+#include <sstream>
+
 using namespace std;
+
+// Path to VTK file
+#define VTK_PATH "data/face.vtk"
+// Path to texture file
+#define TEXTURE_PATH "data/face.ppm"
 
 // Global variables
 vector< Vertex<float> > vertices;	// vector of vertices
@@ -13,6 +36,82 @@ float angle = 0.0f;
 // Calculated values
 Vertex<float> minVertex, maxVertex, centreVertex;	// min, max, and centre (mean) of all the vertices
 
+
+// Vertex Struct
+template <typename T=float> struct Vertex{		// struct to make all the methods public by default
+   T x, y, z;	// Vertex coordinates
+   T textureX, textureY;	// Texture coordinates
+
+   // Constructor
+   Vertex(): x(0), y(0), z(0), textureX(0), textureY(0){}
+   Vertex(T x, T y, T z): x(x), y(y), z(z), textureX(0), textureY(0){}
+   Vertex(const Vertex<T> &obj): x(obj.x), y(obj.y), z(obj.z), textureX(obj.textureX), textureY(obj.textureY) {}	// Copy constructor
+
+   // Assignment Operator
+   Vertex<T> &operator=(const Vertex<T> &obj){
+	   if (this == &obj)
+		   return *this;
+	   x = obj.x;
+	   y = obj.y;
+	   z = obj.z;
+	   textureX = obj.textureX;
+	   textureY = obj.textureY;
+
+	   return *this;
+   }
+   // Dot product
+   T operator|(const Vertex<T> &obj){
+	   return obj.x*x + obj.y*y + obj.z*z;
+   }
+   // Cross Product
+   Vertex<T> operator*(const Vertex<T> &obj){
+	   Vertex<T> result;
+	   result.x = y*obj.z - z*obj.y;
+	   result.y = obj.x*z - x*obj.z;
+	   result.z = x*obj.y-obj.x*y;
+
+	   return result;
+   }
+   // Scalar Product
+   Vertex<T> operator*(const T scalar){
+	   return Vertex<T>(scalar*x, scalar*y, scalar*z);
+   }
+
+   // Addition
+   Vertex<T> operator+(const Vertex<T> &obj){
+	   return Vertex<T>(x+obj.x, y+obj.y, z+obj.z);
+
+   }
+   // Subtraction
+   Vertex<T> operator-(const Vertex<T> &obj){
+	   return Vertex<T>(x-obj.x, y-obj.y, z-obj.z);
+   }
+
+   T magnitude(){
+	   return sqrt(x*x+y*y+z*z);
+   }
+
+   Vertex<T> normalise(){
+	   T mag = magnitude();
+	   return Vertex<T>(x/mag, y/mag, z/mag);
+   }
+};
+
+// Function prototypes
+void init();
+void idle();
+void display();
+void reshape (int w, int h);
+void keyboard(unsigned char key, int x, int y);
+void keyboardSpecial (int key, int x, int y);
+void loadData();
+
+// Overload to allow cout << Vertex
+template <typename T=float> std::ostream& operator<< (std::ostream &output, const Vertex<T> &obj){
+	output << "(" << obj.x << "," << obj.y << "," << obj.z << ")";
+
+	return output;
+}
 /******************** FUNCTIONS ***********************/
 
 
@@ -118,31 +217,12 @@ void display(void)
 			// Define normal of vertex
 			Vertex<float> normal = *k;
 			glNormal3f(normal.x, normal.y, normal.z);
-
-
 		}
 		glEnd();
 	}
 
 	glFlush ();
 	glutSwapBuffers();
-  /*
-  for (all polygons)
-    glBegin(GL_POLYGON);
-    for (all vertices of polygon)
-      // Define texture coordinates of vertex
-      glTexCoord2f(...);
-      // Define normal of vertex
-      glNormal3f(...);
-      // Define coordinates of vertex
-      glVertex3f(...);
-    }
-    glEnd();
-  }
-  glFlush ();
-  //  swap buffer
-  glutSwapBuffers();
-  */
 }
 
 // cf http://www.lighthouse3d.com/tutorials/glut-tutorial/preparing-the-window-for-a-reshape/
