@@ -4,6 +4,7 @@
  * Resources:
  * 	- Lighting: http://www.movesinstitute.org/~mcdowell/mv4202/notes/lect13.pdf
  * 	- General Tutorial: http://www.lighthouse3d.com/tutorials/glut-tutorial/
+ * 	- OpenGL Matrix Maths: http://unspecified.wordpress.com/2012/06/21/calculating-the-gluperspective-matrix-and-other-opengl-matrix-maths/
  *
  */
 
@@ -23,6 +24,16 @@ using namespace std;
 #define VTK_PATH "data/face.vtk"
 // Path to texture file
 #define TEXTURE_PATH "data/face.ppm"
+
+// Rotating angle step
+#define ROTATION_STEP 2.f
+
+// Zooming step
+#define ZOOM_STEP 0.5f
+
+// Factor to multiply for rotation
+#define ROTATION_CLOCKWISE -1.f
+#define ROTATION_ANTICLOCKWISE 1.f
 
 // Vertex Struct
 template <typename T=float> struct Vertex{		// struct to make all the methods public by default
@@ -109,14 +120,16 @@ GLuint texture;
 GLfloat lightPosition[] = {0.0f, 0.0f, 0.0f, 1.0f};
 
 float angle = 0.0f;
+float zoom = 1.f;
 
 // Calculated values
 // min, max, and centre (mean) of all the vertices. Also the mean of polygon normal
-// and camera position
-Vertex<float> minVertex, maxVertex, centreVertex, meanNormal, camera;
+// camera position, direction vector from camera to centreVertex
+Vertex<float> minVertex, maxVertex, centreVertex, meanNormal, camera, cameraVector;
 
 // Toggles
-bool rotate = true;
+bool rotate = false;
+float rotationFactor = ROTATION_CLOCKWISE;
 
 /******************** FUNCTIONS ***********************/
 
@@ -210,10 +223,7 @@ void init()
 
 void idle(){
 	if (!rotate) return;
-	if (angle <= -360.f)
-		angle = 0;
-	else
-		angle -=2.5f;
+	angle += rotationFactor*ROTATION_STEP;
 	glutPostRedisplay();
 }
 
@@ -231,9 +241,16 @@ void display(void)
 
 	// Set the Camera
 	// gluLookAt(eyex, eyey, eyez, centerx, centery, centerz, upx, upy, upz);
+	Vertex<float> lookAt;	// position to look at
+	if (zoom != 1.f){
+		lookAt = camera + cameraVector*zoom;
+	}
+	else{
+		lookAt = centreVertex;
+	}
 
 	gluLookAt(	camera.x, camera.y, camera.z,
-			centreVertex.x, centreVertex.y,  centreVertex.z,
+			lookAt.x, lookAt.y,  lookAt.z,
 			0.0f, 1.0f,  0.0f);
 
 	glRotatef(angle, 0.0f, 1.0f, 0.0f);
@@ -282,8 +299,8 @@ void reshape (int w, int h)
 	glViewport (0, 0, (GLsizei) w, (GLsizei) h);
 
 	// Set the correct perspective.
-	// fov, aspect ratio, near clipping planes, far clipping planes
-	gluPerspective(27.5,ratio,floor(minVertex.z),ceil(maxVertex.z));
+	// fov, aspect ratio, near g planes, far clipping planes
+	gluPerspective(27.5,ratio, 0.0001f, 10.f);
 
 	// set the camera view
 	// gluLookAt(eyex, eyey, eyez, centerx, centery, centerz, upx, upy, upz);
@@ -311,8 +328,21 @@ void keyboard(unsigned char key, int x, int y)
 void keyboardSpecial (int key, int x, int y)
 {
 	switch (key){
-
+		case GLUT_KEY_LEFT:
+			angle -= rotate ? 0.f : ROTATION_STEP;	// ignore if rotation mode is on
+			rotationFactor = rotate ? ROTATION_CLOCKWISE : rotationFactor;	// ignored if rotation factor is not on
+			break;
+		case GLUT_KEY_RIGHT:
+			angle += rotate ? 0.f : ROTATION_STEP;	// ignore if rotation mode is on
+			rotationFactor = rotate ? ROTATION_ANTICLOCKWISE : rotationFactor;	// ignored if rotation factor is not on
+			break;
+		case GLUT_KEY_UP:
+			break;
+		case GLUT_KEY_DOWN:
+			break;
 	}
+	if (!rotate)
+		glutPostRedisplay();
 }
 
 // Loads the VTK file and texture into memory
@@ -403,11 +433,17 @@ void loadData()
 	cout << vertices.size() << " vertices loaded" << endl;
 
 	//Initialise camera position
-	camera.x = ceil(maxVertex.x);
-	camera.y = ceil(maxVertex.y);
-	camera.z = ceil(maxVertex.z);
+//	camera.x = ceil(maxVertex.x);
+//	camera.y = ceil(maxVertex.y);
+//	camera.z = ceil(maxVertex.z);
+
+	camera = maxVertex*10;
+	camera.y = 0.f;		// to "straighten" view
 
 	cout << "Camera: " << camera << endl;
+
+	// Camera vector
+	cameraVector = centreVertex - camera;
 
 
 	// Now we might get some leftover garbage like new line delimiter.
