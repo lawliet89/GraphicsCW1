@@ -2,13 +2,18 @@
 using namespace std;
 
 // Global variables
-vector< Vertex<float> > vertices;
-vector< vector< int > > polygons;
+vector< Vertex<float> > vertices;	// vector of vertices
+vector< vector< int > > polygons;	// vector of indices for the vertices for each polygon
+vector< Vertex<float> > polygonsNormal;	// Normal for each polygon
+
+GLuint texture;
 
 float angle = 0.0f;
 
 // Calculated values
 Vertex<float> minVertex, maxVertex, centreVertex;	// min, max, and centre (mean) of all the vertices
+
+/******************** FUNCTIONS ***********************/
 
 
 int main(int argc, char** argv)
@@ -36,7 +41,7 @@ int main(int argc, char** argv)
 	glutSpecialFunc(keyboardSpecial);	// keyboard special keys
 
 	// Start rendering
-  glutMainLoop();
+	glutMainLoop();
 }
 
 
@@ -47,12 +52,17 @@ void init()
   glClearColor (0.0, 0.0, 0.0, 0.0);
   cout << "init" << endl;
 
-  /*
-  glShadeModel (GL_SMOOTH);
+  glShadeModel (GL_SMOOTH); // http://www.opengl.org/sdk/docs/man2/xhtml/glShadeModel.xml
 
   // Enable lighting
   glEnable (GL_LIGHTING);
-  glEnable (GL_LIGHT0);
+  glEnable (GL_LIGHT0); //Light 0: white light (1.0, 1.0, 1.0, 1.0) in RGBA diffuse and specular components
+  //glEnable(GL_NORMALIZE);	// Auto normlization of normals, but slow
+
+  /*
+
+
+
   glLightfv(GL_LIGHT0, GL_POSITION, LightPosition);
   glLightfv(GL_LIGHT0, GL_AMBIENT,  LightAmbient);
   glLightfv(GL_LIGHT0, GL_DIFFUSE,  LightDiffuse);
@@ -92,8 +102,9 @@ void display(void)
 
 	glRotatef(angle, 0.0f, 1.0f, 0.0f);
 
+	vector< Vertex<float> >::iterator k = polygonsNormal.begin();
 	// Draw polygon
-	for (vector< vector< int > >::iterator i = polygons.begin(); i < polygons.end(); i++){
+	for (vector< vector< int > >::iterator i = polygons.begin(); i < polygons.end(); i++, k++){
 		vector<int> polygon = *i;
 		glBegin(GL_POLYGON);	// Begin drawing polygons
 
@@ -104,6 +115,10 @@ void display(void)
 			glVertex3f(vertex.x, vertex.y, vertex.z);
 			// Define texture coordinates of vertex
 			glTexCoord2f(vertex.textureX, vertex.textureY);
+			// Define normal of vertex
+			Vertex<float> normal = *k;
+			glNormal3f(normal.x, normal.y, normal.z);
+
 
 		}
 		glEnd();
@@ -151,7 +166,7 @@ void reshape (int w, int h)
 
 	// Set the correct perspective.
 	// fov, aspect ratio, near clipping planes, far clipping planes
-	gluPerspective(45,ratio,1,1000);
+	gluPerspective(27.5,ratio,floor(minVertex.z),ceil(maxVertex.z));
 
 	// set the camera view
 	// gluLookAt(eyex, eyey, eyez, centerx, centery, centerz, upx, upy, upz);
@@ -292,6 +307,7 @@ void loadData()
 	int cell;
 	bufferStream >> cell;
 
+	polygonsNormal.reserve(n);
 	int cellCount = 0;	// track and count the number of cells
 	// Load polygons
 	for (int i = 0; i < n; i++){
@@ -300,7 +316,8 @@ void loadData()
 		vtk >> numVertices;
 		cellCount++;
 		// Load the vertices for the current polygon
-		vector<int> current(numVertices);
+		vector<int> current;
+		current.reserve(numVertices);
 		for (int j = 0; j < numVertices; j++){
 			int index;	// Index of the vertex
 			vtk >> index;
@@ -308,6 +325,16 @@ void loadData()
 			cellCount++;
 		}
 		polygons.push_back(current);
+
+		// Calculate the normal for the polygon
+		Vertex<float> normal, vector1, vector2;
+
+		vector1 = vertices.at(current.at(1)) - vertices.at(current.at(0));
+		vector2 = vertices.at(current.at(2)) - vertices.at(current.at(0));
+
+		normal = (vector1*vector2).normalise();
+		polygonsNormal.push_back(normal);
+
 	}
 	if (cellCount != cell){
 		cout << "Cell count mismatch " << cell << " vs " << cellCount << endl;
@@ -345,4 +372,10 @@ void loadData()
 	cout << n << " texture data points loaded.\n";
 
 	cout << "VTK Load complete" << endl;
+
+	// Load texture - cf http://www.nullterminator.net/gltexture.html
+	cout << "Loading texture" << endl;
+	// Allocate a texture name
+	glGenTextures(1, &texture);
+
 }
