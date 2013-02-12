@@ -30,7 +30,7 @@ cgRender.o: cgRender.cpp
 #-------------------------------------------------------------------------------
 # PHONY TARGETS
 #-------------------------------------------------------------------------------
-.PHONY : clean again all git run debug
+.PHONY : clean again all git run debug windows
 all: $(PROGRAM)
 
 clean:
@@ -52,3 +52,7 @@ run:
 debug:
 	make
 	gdb $(PROGRAM)
+
+# start X server on Cygwin
+windows:
+	startxwin
