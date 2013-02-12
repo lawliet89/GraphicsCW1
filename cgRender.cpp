@@ -113,7 +113,7 @@ void reshape (int w, int h);	// Viewport change
 void keyboard(unsigned char key, int x, int y);	// respond to keyboard
 void keyboardSpecial (int key, int x, int y);	// ditto
 void loadData();	// load polygon data and texture
-void screendump(int W, int H);	// dump a screenshot
+void screendump(short W, short H);	// dump a screenshot
 void setMaterial();		// set the material setting on the face
 
 /****************** Materials Related ***************************/
@@ -817,7 +817,7 @@ void loadData()
 
 // Save file as TGA
 // from http://www.opengl.org/discussion_boards/showthread.php/161499-Output-Image-to-file
-void screendump(int W, int H) {
+void screendump(short W, short H) {
 	FILE   *out = fopen("screenshot.tga","wb");
 	char   *pixel_data = new char[3*W*H];
 	short  TGAhead[] = { 0, 2, 0, 0, 0, 0, W, H, 24 };
