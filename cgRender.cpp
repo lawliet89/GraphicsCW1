@@ -8,6 +8,7 @@
  *
  */
 
+/*************** Includes *******************/
 #include <GL/glut.h>
 #include <cstdlib>
 #include <cmath>
@@ -20,6 +21,7 @@
 
 using namespace std;
 
+/*************** Macros *******************/
 // Path to VTK file
 #define VTK_PATH "data/face.vtk"
 // Path to texture file
@@ -38,6 +40,7 @@ using namespace std;
 #define ROTATION_CLOCKWISE -1.f
 #define ROTATION_ANTICLOCKWISE 1.f
 
+/*************** Classes *******************/
 template <typename T=float> class Coordinate{
     T x, y, z;  // Components
 public:
@@ -123,7 +126,7 @@ public:
     }
 };
 
-// Vertex Struct
+// Vertex Class
 template <typename T=float> class Vertex{
     Coordinate<T> vertex, texture, averageNormal;
     vector<Coordinate <T> > normals;
@@ -224,8 +227,7 @@ template <typename T=float> std::ostream& operator<< (std::ostream &output, cons
     return operator<<(output, obj.getVertex());
 }
 
-
-// Function prototypes
+/*************** Function Prototypes *******************/
 void init();        // Initialise lighting and texture
 void idle();        // Idle rotation animation
 void display();     // Render
@@ -236,7 +238,7 @@ void loadData();    // load polygon data and texture
 void screendump(short W, short H);  // dump a screenshot
 void setMaterial();     // set the material setting on the face
 
-/****************** Materials Related ***************************/
+/****************** Materials Related Declaration and variables ***************************/
 // Material state
 /*
  * 0 - none - based on defaults @ http://www.gamedev.net/topic/283067-reset-material-values-to-default/
@@ -295,6 +297,7 @@ Coordinate<float> minVertex, maxVertex, centreVertex, meanNormal, camera, camera
 // Toggles
 bool rotate = false;
 bool showTexture = true;
+bool useAverageNormals = true;
 float rotationFactor = ROTATION_ANTICLOCKWISE;
 
 // Texture Data
@@ -303,9 +306,7 @@ char *textureData;
 
 /******************** FUNCTIONS ***********************/
 
-
-int main(int argc, char** argv)
-{
+int main(int argc, char** argv){
     // Load data to memory
     loadData();
 
@@ -334,11 +335,7 @@ int main(int argc, char** argv)
     glutMainLoop();
 }
 
-
-
-
-void init()
-{
+void init(){
     glClearColor (0.0, 0.0, 0.0, 0.0);
     cout << "Setting up lighting" << endl;
 
@@ -430,7 +427,6 @@ void idle(){
 
 // Render the scene
 void display(){
-
     // Clear Color and Depth Buffers
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     //cout << "display" << endl;
@@ -468,6 +464,10 @@ void display(){
 
     glRotatef(angle, 0.f, centreVertex.getY(), 0.f);
 
+    vector< Coordinate<float> >::iterator k;
+    if (!useAverageNormals)
+    	k = polygonsNormal.begin();
+
     // Draw polygon
     for (vector< vector< int > >::iterator i = polygons.begin(); i < polygons.end(); i++){
         vector<int> polygon = *i;
@@ -480,12 +480,20 @@ void display(){
             glTexCoord2f(vertex.getTexture().getX(), vertex.getTexture().getY());
 
             // Define normal of vertex
-            glNormal3f(vertex.getAverageNormal().getX(),vertex.getAverageNormal().getY(), vertex.getAverageNormal().getZ());
-
+            if (useAverageNormals)
+            	glNormal3f(vertex.getAverageNormal().getX(),vertex.getAverageNormal().getY(), vertex.getAverageNormal().getZ());
+            else{
+            	Coordinate<float> normal = *k;
+            	glNormal3f(normal.getX(), normal.getY(), normal.getZ());
+            }
             // Define coordinates of vertex
             glVertex3f(vertex.getVertex().getX(), vertex.getVertex().getY(), vertex.getVertex().getZ());
 
+
+
         }
+        if (!useAverageNormals)
+            	k++;
         glEnd();
     }
     if (showTexture)
@@ -529,8 +537,7 @@ void reshape (int w, int h)
 }
 
 // "Normal" key presses
-void keyboard(unsigned char key, int x, int y)
-{
+void keyboard(unsigned char key, int x, int y){
     switch (key) {
         case 27: // ESC
             exit(0);
@@ -555,12 +562,18 @@ void keyboard(unsigned char key, int x, int y)
             cout << "Texture toggled: " << showTexture << endl;
             if (!rotate) glutPostRedisplay();
             break;
+        case 'n':
+        	useAverageNormals = !useAverageNormals;
+        	cout << "Use Average Normals Toggled: " << useAverageNormals << endl;
+        	if (!rotate) glutPostRedisplay();
+        	break;
         case 's':   // Output current setting to console
             cout << "Zoom factor: " << zoom << endl;
             cout << "Translation factor: " << translationFactor << endl;
             cout << "Rotation angle: " << angle << endl;
             cout << "Material state: " << materialState << endl;
             cout << "Texture state: " << showTexture << endl;
+            cout << "Use Average Normals: " << useAverageNormals << endl;
             break;
 
         case '1':   // Set the scene to take picture for gouraud-1
@@ -635,8 +648,7 @@ void keyboard(unsigned char key, int x, int y)
 }
 
 // Special key presses
-void keyboardSpecial (int key, int x, int y)
-{
+void keyboardSpecial (int key, int x, int y){
     int modifier = glutGetModifiers();
     switch (key){
         case GLUT_KEY_LEFT:
@@ -671,8 +683,7 @@ void keyboardSpecial (int key, int x, int y)
 
 // Loads the VTK file and texture into memory
 // Also populates some variables
-void loadData()
-{
+void loadData(){
     cout << "Loading VTK" << endl;
     ifstream vtk(VTK_PATH); // Open the VTK file
     if (vtk.fail()){    // File opening has failed
@@ -945,7 +956,8 @@ void loadData()
 
 // Save file as TGA
 // from http://www.opengl.org/discussion_boards/showthread.php/161499-Output-Image-to-file
-void screendump(short W, short H) {
+// doesn't seem to work well with textures.
+void screendump(short W, short H){
     FILE   *out = fopen("screenshot.tga","wb");
     char   *pixel_data = new char[3*W*H];
     short  TGAhead[] = { 0, 2, 0, 0, 0, 0, W, H, 24 };
