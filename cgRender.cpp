@@ -106,7 +106,7 @@ template <typename T=float> std::ostream& operator<< (std::ostream &output, cons
 }
 
 // Function prototypes
-void init();		// Initialise lighting and material
+void init();		// Initialise lighting and texture
 void idle();		// Idle rotation animation
 void display();		// Render
 void reshape (int w, int h);	// Viewport change
@@ -174,7 +174,12 @@ Vertex<float> minVertex, maxVertex, centreVertex, meanNormal, camera, cameraVect
 
 // Toggles
 bool rotate = false;
+bool showTexture = true;
 float rotationFactor = ROTATION_ANTICLOCKWISE;
+
+// Texture Data
+int textureWidth, textureHeight;
+char *textureData;
 
 /******************** FUNCTIONS ***********************/
 
@@ -193,8 +198,10 @@ int main(int argc, char** argv)
 	glutInitWindowPosition (-1, -1);	// set to -1 to let window manager decide
 	glutCreateWindow ("Graphics Coursework 1 (ywc110)");
 
-	// Initialize OpenGL
+	// Initialise lighting & texture
 	init();
+
+	cout << "Initialised" << endl;
 
 	// Initialize callback functions
 	glutDisplayFunc(display);	// render display
@@ -255,6 +262,44 @@ void init()
 
 	// Enable Z-buffering
 	glEnable(GL_DEPTH_TEST);
+
+	/*
+	 * Links:
+	 * 	- http://www.opengl.org/wiki/Common_Mistakes#Automatic_mipmap_generation
+	 * 	- http://www.nullterminator.net/gltexture.html
+	 */
+	// Allocate a texture name
+	glGenTextures(1, &texture);
+
+	// select our current texture
+	glBindTexture( GL_TEXTURE_2D, texture );
+
+	// select modulate to mix texture with colour for shading
+	glTexEnvf( GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE );
+
+	glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST );
+	glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR );
+
+	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+
+	// clamp texture at edges
+	glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP );
+	glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP );
+
+	glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE);
+
+	// assign texture
+	glTexImage2D(GL_TEXTURE_2D, 0, 3, 512, 512, 0, GL_RGB, GL_UNSIGNED_BYTE, textureData);
+
+	//gluBuild2DMipmaps(GL_TEXTURE_2D, GL_RGB8, textureWidth, textureHeight, GL_RGB, GL_UNSIGNED_BYTE, textureData);
+
+	//glBindTexture(GL_TEXTURE_2D, 0);
+
+	cout << "Texture loaded" << endl;
+
+	delete[] textureData;	// can now be safely deleted
+
 }
 
 void idle(){
@@ -271,9 +316,13 @@ void display(void)
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	//cout << "display" << endl;
 
+	if (showTexture){
+		// Texture mapping
+		glEnable(GL_TEXTURE_2D);
+		glBindTexture(GL_TEXTURE_2D, texture );
+	}
 	// Reset transformation
 	glLoadIdentity();
-
 
 	// Set the Camera
 	// gluLookAt(eyex, eyey, eyez, centerx, centery, centerz, upx, upy, upz);
@@ -304,22 +353,28 @@ void display(void)
 	// Draw polygon
 	for (vector< vector< int > >::iterator i = polygons.begin(); i < polygons.end(); i++, k++){
 		vector<int> polygon = *i;
-		glBegin(GL_POLYGON);	// Begin drawing polygons
+		glBegin(GL_POLYGON);	// Begin drawing polygon
 
 		for (vector<int>::iterator j = polygon.begin(); j < polygon.end(); j++){
 			Vertex<float> vertex = vertices.at(*j);
 
-			// Define coordinates of vertex
-			glVertex3f(vertex.x, vertex.y, vertex.z);
 			// Define texture coordinates of vertex
 			glTexCoord2f(vertex.textureX, vertex.textureY);
+
 			// Define normal of vertex
 			Vertex<float> normal = *k;
 			glNormal3f(normal.x, normal.y, normal.z);
+
+			// Define coordinates of vertex
+			glVertex3f(vertex.x, vertex.y, vertex.z);
+
+
+
 		}
 		glEnd();
 	}
-
+	if (showTexture)
+		glDisable(GL_TEXTURE_2D);
 	glFlush ();
 	glutSwapBuffers();
 }
@@ -362,76 +417,106 @@ void reshape (int w, int h)
 void keyboard(unsigned char key, int x, int y)
 {
 	switch (key) {
-	case 27: // ESC
-		exit(0);
-		break;
-	case 'r':
-		rotate = !rotate;
-		break;
-	case 'p':
-		screendump(viewportWidth, viewportHeight);
-		cout << "Dumped" << endl;
-		break;
-	case 'm':
-		materialState++;
-		if (materialState > MAX_MATERIAL_STATE)
+		case 27: // ESC
+			exit(0);
+			break;
+		case 'r':
+			rotate = !rotate;
+			break;
+		case 'p':
+			screendump(viewportWidth, viewportHeight);
+			cout << "Dumped" << endl;
+			break;
+		case 'm':
+			materialState++;
+			if (materialState > MAX_MATERIAL_STATE)
+				materialState = 0;
+			setMaterial();
+			cout << "Material toggled: " << materialState << endl;
+			if (!rotate) glutPostRedisplay();
+			break;
+		case 't':
+			showTexture = !showTexture;
+			cout << "Texture toggled: " << showTexture << endl;
+			if (!rotate) glutPostRedisplay();
+			break;
+		case 's':	// Output current setting to console
+			cout << "Zoom factor: " << zoom << endl;
+			cout << "Translation factor: " << translationFactor << endl;
+			cout << "Rotation angle: " << angle << endl;
+			cout << "Material state: " << materialState << endl;
+			cout << "Texture state: " << showTexture << endl;
+			break;
+
+		case '1':	// Set the scene to take picture for gouraud-1
+			/*
+				Zoom factor: 2.7
+				Translation factor: 0.083
+				Rotation angle: 0
+				Material State: 0
+				Texture State: 0
+			 */
+			zoom = 2.7f;
+			translationFactor = 0.083f;	// perhaps unnecessary
+			angle = 0.f;
 			materialState = 0;
-		setMaterial();
-		cout << "Material toggled: " << materialState << endl;
-		glutPostRedisplay();
-		break;
-	case 's':	// Output current setting to console
-		cout << "Zoom factor: " << zoom << endl;
-		cout << "Translation factor: " << translationFactor << endl;
-		cout << "Rotation angle: " << angle << endl;
-		cout << "Material state: " << materialState << endl;
-		break;
+			showTexture = false;
+			rotate = false;
+			setMaterial();
+			if (!rotate) glutPostRedisplay();
+			break;
+		case '2': // Set the scene to take picture for gouraud-2
+			/*
+				Zoom factor: 2.7
+				Translation factor: -0.042
+				Rotation angle: 32
+				Material state: 0
+				Texture State: 0
+			 */
+			zoom = 2.7f;
+			angle = 32.f;
+			materialState = 0;
+			translationFactor = -0.042f;
+			rotate = false;
+			showTexture = false;
+			setMaterial();
+			if (!rotate) glutPostRedisplay();
+			break;
+		case '3': // Set the scene to take picture for gouraud-3
+	/*		Zoom factor: 2.7
+			Translation factor: -0.099
+			Rotation angle: 68
+			Texture State: 0
+			Material state: 2*/
 
-	case '1':	// Set the scene to take picture for gouraud-1
-		/*
-		 	Zoom factor: 2.7
-			Translation factor: 0.083
-			Rotation angle: 0
-			Material State: 0
-		 */
-		zoom = 2.7f;
-		translationFactor = 0.083f;	// perhaps unnecessary
-		angle = 0.f;
-		materialState = 0;
-		rotate = false;
-		setMaterial();
-		glutPostRedisplay();
-		break;
-	case '2': // Set the scene to take picture for gouraud-2
-		/*
-		 	Zoom factor: 2.7
-			Translation factor: -0.042
-			Rotation angle: 32
-			Material state: 0
-		 */
-		zoom = 2.7f;
-		angle = 32.f;
-		materialState = 0;
-		translationFactor = -0.042f;
-		rotate = false;
-		setMaterial();
-		glutPostRedisplay();
-		break;
-	case '3': // Set the scene to take picture for gouraud-3
-/*		Zoom factor: 2.7
-		Translation factor: -0.099
-		Rotation angle: 68
-		Material state: 2*/
+			zoom = 2.7f;
+			angle = 68.f;
+			materialState = 2;
+			translationFactor = -0.099f;
+			rotate = false;
+			showTexture = false;
+			setMaterial();
+			if (!rotate) glutPostRedisplay();
+			break;
+		case '4': // Set the scene to take picture for texture
+	/*		Zoom factor: 2.7
+			Translation factor: -0.099
+			Rotation angle: 68
+			Texture State: 0
+			Material state: 2*/
 
-		zoom = 2.7f;
-		angle = 68.f;
-		materialState = 2;
-		translationFactor = -0.099f;
-		rotate = false;
-		setMaterial();
-		glutPostRedisplay();
-		break;
+			zoom = 2.7f;
+			angle = 68.f;
+			materialState = 2;
+			translationFactor = -0.099f;
+			rotate = false;
+			showTexture = true;
+			setMaterial();
+			if (!rotate) glutPostRedisplay();
+			break;
 	}
+
+
 }
 
 // Special key presses
@@ -475,8 +560,7 @@ void loadData()
 {
 	cout << "Loading VTK" << endl;
 	ifstream vtk(VTK_PATH);	// Open the VTK file
-	if (vtk.fail())
-	{	// File opening has failed
+	if (vtk.fail()){	// File opening has failed
 		cout << "Unable to open VTK file \n";
 		exit(1);
 	}
@@ -675,10 +759,60 @@ void loadData()
 	cout << "VTK Load complete" << endl;
 
 	// Load texture - cf http://www.nullterminator.net/gltexture.html
-	cout << "Loading texture" << endl;
-	// Allocate a texture name
-	glGenTextures(1, &texture);
+	cout << "Loading ppm texture" << endl;
 
+	ifstream ppm(TEXTURE_PATH);
+	if (ppm.fail()){	// File opening has failed
+		cout << "Unable to open PPM file \n";
+		exit(1);
+	}
+
+	// Check "magic number"
+	ppm >> buffer;
+	if (buffer != "P6"){
+		cout << "Invalid magic number" << endl;
+		exit(1);
+	}
+
+	// Height and width
+	ppm >> textureWidth >> textureHeight;
+
+	cout << textureWidth << " x " << textureHeight << " texture found" << endl;
+
+	int maxVal;
+	ppm >> maxVal;
+
+	cout << "MaxVal: " << maxVal << endl;
+
+	if (maxVal > 255){
+		cout << "Only maxval of up to 255 is supported \n";
+		exit(1);
+	}
+
+	// Read away the next whitespace (one byte or a char)
+	ppm.get();
+
+	if (ppm.fail() || ppm.eof()){
+		cout << "Texture loading failed" << endl;
+		exit(1);
+	}
+
+	int size = textureHeight*textureWidth*3;
+	textureData = new char[size];
+	ppm.read(textureData, size);
+
+	if (ppm.fail()){
+			cout << "Texture loading failed" << endl;
+			exit(1);
+	}
+
+	cout << "Texture read: " << size << " bytes" << endl;
+
+
+	//GLenum error = glGetError();
+	//cout << error << endl;
+
+	//delete[] textureData;
 }
 
 // Save file as TGA
