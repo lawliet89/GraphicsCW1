@@ -498,7 +498,7 @@ void display(){
     }
     if (showTexture)
         glDisable(GL_TEXTURE_2D);
-    glFlush ();
+    //glFlush ();
     glutSwapBuffers();
 }
 
@@ -687,7 +687,7 @@ void loadData(){
     cout << "Loading VTK" << endl;
     ifstream vtk(VTK_PATH); // Open the VTK file
     if (vtk.fail()){    // File opening has failed
-        cout << "Unable to open VTK file \n";
+        cerr << "Unable to open VTK file \n";
         exit(1);
     }
 
@@ -720,7 +720,7 @@ void loadData(){
     } while(buffer != "POINTS" && !vtk.eof());
 
     if (vtk.eof()){
-        cout << "File ended unexpectedly (POINTS) \n";
+        cerr << "File ended unexpectedly (POINTS) \n";
         exit(1);
     }
     // Get the number of points
@@ -732,7 +732,7 @@ void loadData(){
 
     for (int i = 0; i < n; i++){
         if (vtk.eof()){
-            cout << "File ended unexpectedly (VERTICES) \n";
+            cerr << "File ended unexpectedly (VERTICES) \n";
             exit(1);
         }
         float x,y,z;
@@ -796,7 +796,7 @@ void loadData(){
     } while(buffer != "POLYGONS" && !vtk.eof());
 
     if (vtk.eof()){
-        cout << "File ended unexpectedly (POLYGONS) \n";
+        cerr << "File ended unexpectedly (POLYGONS) \n";
         exit(1);
     }
 
@@ -859,7 +859,7 @@ void loadData(){
         it -> calculateAverageNormal();
     }
     if (cellCount != cell){
-        cout << "Cell count mismatch " << cell << " vs " << cellCount << endl;
+        cerr << "Cell count mismatch " << cell << " vs " << cellCount << endl;
         exit(1);
     }
 
@@ -878,7 +878,7 @@ void loadData(){
     } while(buffer != "POINT_DATA" && !vtk.eof());
 
     if (vtk.eof()){
-        cout << "File ended unexpectedly (POINT_DATA) \n";
+        cerr << "File ended unexpectedly (POINT_DATA) \n";
         exit(1);
     }
 
@@ -902,14 +902,14 @@ void loadData(){
 
     ifstream ppm(TEXTURE_PATH);
     if (ppm.fail()){    // File opening has failed
-        cout << "Unable to open PPM file \n";
+        cerr << "Unable to open PPM file \n";
         exit(1);
     }
 
     // Check "magic number"
     ppm >> buffer;
     if (buffer != "P6"){
-        cout << "Invalid magic number" << endl;
+        cerr << "Invalid magic number" << endl;
         exit(1);
     }
 
@@ -924,7 +924,7 @@ void loadData(){
     cout << "MaxVal: " << maxVal << endl;
 
     if (maxVal > 255){
-        cout << "Only maxval of up to 255 is supported \n";
+        cerr << "Only maxval of up to 255 is supported \n";
         exit(1);
     }
 
@@ -932,7 +932,7 @@ void loadData(){
     ppm.get();
 
     if (ppm.fail() || ppm.eof()){
-        cout << "Texture loading failed" << endl;
+        cerr << "Texture loading failed" << endl;
         exit(1);
     }
 
@@ -941,7 +941,7 @@ void loadData(){
     ppm.read(textureData, size);
 
     if (ppm.fail()){
-            cout << "Texture loading failed" << endl;
+            cerr << "Texture loading failed" << endl;
             exit(1);
     }
 
@@ -949,7 +949,7 @@ void loadData(){
 
 
     //GLenum error = glGetError();
-    //cout << error << endl;
+    //cerr << error << endl;
 
     //delete[] textureData;
 }
