@@ -487,6 +487,11 @@ void display(){
             lookAt.getX(), lookAt.getY(),  lookAt.getZ(),
             0.0f, 1.0f,  0.0f);
 
+    // "Clean up" rotation angle variable
+    if (angle > 0) angle = fmod(angle,360.f);
+    else if (angle < 0) angle = -fmod( fabs(angle), 360.f);
+
+    // Rotation
     glRotatef(angle, 0.f, centreVertex.getY(), 0.f);
 
     // Draw polygons
