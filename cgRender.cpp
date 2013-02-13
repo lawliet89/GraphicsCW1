@@ -5,7 +5,7 @@
  *  - Lighting: http://www.movesinstitute.org/~mcdowell/mv4202/notes/lect13.pdf
  *  - General Tutorial: http://www.lighthouse3d.com/tutorials/glut-tutorial/
  *  - OpenGL Matrix Maths: http://unspecified.wordpress.com/2012/06/21/calculating-the-gluperspective-matrix-and-other-opengl-matrix-maths/
- *
+ *  - Display List: http://www.songho.ca/opengl/gl_displaylist.html
  */
 
 /*************** Includes *******************/
@@ -228,7 +228,7 @@ template <typename T=float> std::ostream& operator<< (std::ostream &output, cons
 }
 
 /*************** Function Prototypes *******************/
-void init();        // Initialise lighting and texture
+void init();        // Initialise polygons, lighting, and texture
 void idle();        // Idle rotation animation
 void display();     // Render
 void reshape (int w, int h);    // Viewport change
@@ -279,8 +279,8 @@ vector< Vertex<float> > vertices;   // vector of vertices
 vector< vector< int > > polygons;   // vector of indices for the vertices for each polygon
 vector< Coordinate<float> > polygonsNormal; // Normal for each polygon
 
-GLuint texture;
-GLfloat lightPosition[] = {0.0f, 0.0f, 0.0f, 1.0f};
+GLuint texture, displayList;	// OpenGL indices for texture and display list
+//GLfloat lightPosition[] = {0.0f, 0.0f, 0.0f, 1.0f}; // unused
 
 float angle = 0.0f;
 float zoom = 1.f;
@@ -297,7 +297,6 @@ Coordinate<float> minVertex, maxVertex, centreVertex, meanNormal, camera, camera
 // Toggles
 bool rotate = false;
 bool showTexture = true;
-bool useAverageNormals = true;
 float rotationFactor = ROTATION_ANTICLOCKWISE;
 
 // Texture Data
@@ -319,7 +318,7 @@ int main(int argc, char** argv){
     glutInitWindowPosition (-1, -1);    // set to -1 to let window manager decide
     glutCreateWindow ("Graphics Coursework 1 (ywc110)");
 
-    // Initialise lighting & texture
+    // Initialise polygons, lighting, and texture
     init();
 
     cout << "Initialised" << endl;
@@ -417,6 +416,32 @@ void init(){
 
     delete[] textureData;   // can now be safely deleted
 
+    // Initialise polygons
+    displayList = glGenLists(1);	// create display list
+    glNewList(displayList, GL_COMPILE);	// compile
+
+    for (vector< vector< int > >::iterator i = polygons.begin(); i < polygons.end(); i++){
+        vector<int> polygon = *i;
+        glBegin(GL_POLYGON);    // Begin drawing polygon
+
+        for (vector<int>::iterator j = polygon.begin(); j < polygon.end(); j++){
+            Vertex<float> vertex = vertices.at(*j);
+
+            // Define texture coordinates of vertex
+            glTexCoord2f(vertex.getTexture().getX(), vertex.getTexture().getY());
+
+            // Define normal of vertex
+            glNormal3f(vertex.getAverageNormal().getX(),vertex.getAverageNormal().getY(), vertex.getAverageNormal().getZ());
+
+            // Define coordinates of vertex
+            glVertex3f(vertex.getVertex().getX(), vertex.getVertex().getY(), vertex.getVertex().getZ());
+
+
+
+        }
+        glEnd();
+    }
+    glEndList();
 }
 
 void idle(){
@@ -464,38 +489,9 @@ void display(){
 
     glRotatef(angle, 0.f, centreVertex.getY(), 0.f);
 
-    vector< Coordinate<float> >::iterator k;
-    if (!useAverageNormals)
-    	k = polygonsNormal.begin();
+    // Draw polygons
+    glCallList(displayList);
 
-    // Draw polygon
-    for (vector< vector< int > >::iterator i = polygons.begin(); i < polygons.end(); i++){
-        vector<int> polygon = *i;
-        glBegin(GL_POLYGON);    // Begin drawing polygon
-
-        for (vector<int>::iterator j = polygon.begin(); j < polygon.end(); j++){
-            Vertex<float> vertex = vertices.at(*j);
-
-            // Define texture coordinates of vertex
-            glTexCoord2f(vertex.getTexture().getX(), vertex.getTexture().getY());
-
-            // Define normal of vertex
-            if (useAverageNormals)
-            	glNormal3f(vertex.getAverageNormal().getX(),vertex.getAverageNormal().getY(), vertex.getAverageNormal().getZ());
-            else{
-            	Coordinate<float> normal = *k;
-            	glNormal3f(normal.getX(), normal.getY(), normal.getZ());
-            }
-            // Define coordinates of vertex
-            glVertex3f(vertex.getVertex().getX(), vertex.getVertex().getY(), vertex.getVertex().getZ());
-
-
-
-        }
-        if (!useAverageNormals)
-            	k++;
-        glEnd();
-    }
     if (showTexture)
         glDisable(GL_TEXTURE_2D);
     //glFlush ();
@@ -562,18 +558,12 @@ void keyboard(unsigned char key, int x, int y){
             cout << "Texture toggled: " << showTexture << endl;
             if (!rotate) glutPostRedisplay();
             break;
-        case 'n':
-        	useAverageNormals = !useAverageNormals;
-        	cout << "Use Average Normals Toggled: " << useAverageNormals << endl;
-        	if (!rotate) glutPostRedisplay();
-        	break;
         case 's':   // Output current setting to console
             cout << "Zoom factor: " << zoom << endl;
             cout << "Translation factor: " << translationFactor << endl;
             cout << "Rotation angle: " << angle << endl;
             cout << "Material state: " << materialState << endl;
             cout << "Texture state: " << showTexture << endl;
-            cout << "Use Average Normals: " << useAverageNormals << endl;
             break;
 
         case '1':   // Set the scene to take picture for gouraud-1
