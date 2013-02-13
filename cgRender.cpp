@@ -6,6 +6,17 @@
  *  - General Tutorial: http://www.lighthouse3d.com/tutorials/glut-tutorial/
  *  - OpenGL Matrix Maths: http://unspecified.wordpress.com/2012/06/21/calculating-the-gluperspective-matrix-and-other-opengl-matrix-maths/
  *  - Display List: http://www.songho.ca/opengl/gl_displaylist.html
+ *
+ *  Keyboard Shortcuts:
+ *  	- Up/Down: Zoom in/out
+ *  	- Left/Right: Translate left/right
+ *  	- R: Toggle auto rotate
+ *  	- CTRL + Left/Right: Rotate clockwise/anti-clockwise or change direction of rotation depending on auto-rotate state
+ *  	- M: Cycle material setting
+ *  	- T: Toggle texture
+ *  	- S: Dump scene parameters to console
+ *  	- P: Save scene to screenshot.tga screenshot
+ *  	- 1,2,3,4: Pre-defined scenes
  */
 
 /*************** Includes *******************/
